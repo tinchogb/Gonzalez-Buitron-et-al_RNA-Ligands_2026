@@ -1,0 +1,23 @@
+[project]
+name = "Gonzalez-Buitron-et-al_RNA-Ligands_2026"
+version = "0.1.0"
+description = "Code and data supporting the paper \"Exploring RNA conformational diversity and RNA-ligand interaction using CoDNaS-RNA\"."
+readme = "README.md"
+requires-python = ">=3.14"
+dependencies = [
+    "aiohttp>=3.13.5",
+    "aiolimiter>=1.2.1",
+    "biotite>=1.6.0",
+    "crc64iso>=0.0.2",
+    "gemmi>=0.7.5",
+    "httpx>=0.28.1",
+    "jupyterlab>=4.5.0",
+    "matplotlib>=3.10.7",
+    "matplotlib-venn>=1.1.2",
+    "natsort>=8.4.0",
+    "pandas>=2.3.3",
+    "seaborn>=0.13.2",
+    "tenacity>=9.1.4",
+    "tqdm>=4.67.3",
+    "upsetplot>=0.9.0",
+]
