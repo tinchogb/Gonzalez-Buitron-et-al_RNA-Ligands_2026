@@ -1,0 +1,87 @@
+#####################################################
+#                                                   #
+#                  THINGS TO IGNORE                 #
+#                  ================                 #
+#                                                   #
+# Project: Gonzalez-Buitron-et-al_RNA-Ligands_2026  #
+# Year:    2026                                     #
+#                                                   #
+#                                                   #
+# Written by Martín González Buitrón                #
+# Email: martingonzalezbuitron@gmail.com            #
+#####################################################
+
+###########################################
+################# POLICY ##################
+###########################################
+# Ignore everything -hidden or not-
+.*
+/*
+
+
+###########################################
+################ Folders ##################
+###########################################
+# Main project folders
+!/docs
+/docs/*
+
+!/src
+/src/**/__*
+/src/notebooks/*
+!/src/notebooks/00_ingestion
+/src/notebooks/00_ingestion/*
+!/src/notebooks/01_etl
+/src/notebooks/01_etl/*
+!/src/notebooks/02_consumption
+/src/notebooks/02_consumption/*
+
+# I don't want to put under control version
+# software downloaded and/or installed
+!/software
+/software/*
+
+
+###########################################
+############## HIDDEN files ###############
+###########################################
+# The ".gitignore"
+!/.gitignore
+!/.python-version
+
+
+###########################################
+############## REGULAR files ##############
+###########################################
+# Main markdown files
+!NEWS.md
+!README.md
+!LICENSE.md
+
+!/src/notebooks/00_ingestion/gemmi.ipynb
+!/src/notebooks/00_ingestion/ring.ipynb
+!/src/notebooks/01_etl/data_transformation.ipynb
+!/src/notebooks/figures_and_tables.ipynb
+
+!uv.lock
+!pyproject.toml
+
+
+###########################################
+############## OUTPUT files ###############
+###########################################
+
+
+###########################################
+########### VIRTUALENV folders ############
+###########################################
+# Bad idea put under control python enviroments.
+# Use "pip3 freeze > requirements.txt" insted.
+#### Local (format: ".<project-name>-<py-version>venv")
+# are ignored in "HIDDEN Files" section
+
+
+###########################################
+############ SOFTWARE folders #############
+###########################################
+# Software installed by user
