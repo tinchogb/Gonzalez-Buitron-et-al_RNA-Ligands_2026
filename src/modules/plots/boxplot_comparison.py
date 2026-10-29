@@ -9,6 +9,8 @@ Supports:
   - Optional sub-split by status (hue/colors).
   - Optional aggregated 'All' boxplot.
   - Independent palettes for categories and statuses.
+  - Optional sample size counts in the color legend label formatted as
+    '( n = <value> ) - <label>'.
   - Statistical annotations displayed as a separate legend below the color legend.
 """
 
@@ -406,7 +408,7 @@ def plot_boxplot_comparison(
     xlabel: Optional[str] = None,
     ylabel: Optional[str] = None,
     title: Optional[str] = None,
-    legend_title: Optional[str] = None,
+    title_fontsize: Optional[float] = 11,
     category_order: Optional[List[str]] = None,
     status_order: Optional[List[str]] = None,
     show_all: bool = False,
@@ -415,15 +417,18 @@ def plot_boxplot_comparison(
     use_log: bool = False,
     show_outliers: bool = True,
     status_opacity_factor: float = 0.6,
-    y_tick_interval: float = 1.0,
+    ytick_interval: float = 1.0,
+    xtick_labels: bool = True,
     xtick_rotation: float = 0.0,
     xtick_size: float = 10.0,
     horizontal_alignment: str = "center",
+    legend_title: Optional[str] = None,
     legend_title_fontsize: Optional[float] = None,
     legend_label_fontsize: Optional[float] = None,
     ax: Optional[plt.Axes] = None,
     add_stats_mann_whitney_u: bool = True,
     show_ns: bool = True,
+    show_n_in_legend: bool = True,
     legend_mann_whitney_u: Optional[str] = "Mann-Whitney U",
     figsize: Tuple[float, float] = (8, 6),
 ) -> plt.Axes:
@@ -447,8 +452,8 @@ def plot_boxplot_comparison(
         derived from the category palette by adjusting opacity.
     xlabel, ylabel, title : str, optional
         Axis labels and plot title. If None, nothing is displayed.
-    legend_title : str, optional
-        Title for the color legend. If None, no title is shown.
+    title_fontsize : float, optional
+        Font size for the plot title.
     category_order : list, optional
         Order of categories on the X-axis.
     status_order : list, optional
@@ -466,14 +471,18 @@ def plot_boxplot_comparison(
     status_opacity_factor : float
         Opacity factor for secondary statuses when palette_status is not
         provided. Values < 1.0 lighten the color by blending with white.
-    y_tick_interval : float
+    ytick_interval : float
         Interval between major ticks on the Y-axis (default: 1.0).
+    xtick_labels : bool
+        Whether to show x-axis tick labels (default: True).
     xtick_rotation : float
         Rotation angle for x-axis tick labels (default: 0.0).
     xtick_size : float
         Font size for x-axis tick labels (default: 10.0).
     horizontal_alignment : str
         Horizontal alignment of x-axis tick labels (default: "center").
+    legend_title : str, optional
+        Title for the color legend. If None, no title is shown.
     legend_title_fontsize : float, optional
         Font size for legend titles.
     legend_label_fontsize : float, optional
@@ -484,6 +493,9 @@ def plot_boxplot_comparison(
         Compute and display Mann-Whitney U comparisons as a legend.
     show_ns : bool
         Include non-significant comparisons in the stats legend.
+    show_n_in_legend : bool
+        Display valid non-null sample counts (N) in the legend labels
+        formatted as '( n = <value> ) - <label>' with right-aligned digits.
     legend_mann_whitney_u : str, optional
         Title for the statistical legend. If None, no title is shown.
     figsize : tuple
@@ -520,6 +532,32 @@ def plot_boxplot_comparison(
     else:
         fig = ax.get_figure()
 
+    # Calculate sample counts per category (or category - status pair)
+    sample_counts: Dict[Tuple[str, Optional[str]], int] = {}
+    if status_col is None:
+        valid_df = plot_df.dropna(subset=[value_col, category_col])
+        counts_series = valid_df.groupby(category_col)[value_col].count()
+        for cat in cat_order:
+            sample_counts[(cat, None)] = int(counts_series.get(cat, 0))
+    else:
+        valid_df = plot_df.dropna(subset=[value_col, category_col, status_col])
+        counts_series = valid_df.groupby([category_col, status_col])[value_col].count()
+        for cat in cat_order:
+            for stat in (stat_order or []):
+                sample_counts[(cat, stat)] = int(counts_series.get((cat, stat), 0))
+
+    max_n_len = (
+        max(len(str(n)) for n in sample_counts.values()) if sample_counts else 0
+    )
+
+    def _format_legend_label(cat: str, stat: Optional[str] = None) -> str:
+        base_label = _format_boxplot_name(cat, stat)
+        if show_n_in_legend:
+            n_val = sample_counts.get((cat, stat), 0)
+            n_str = str(n_val).rjust(max_n_len)
+            return f"( n = {n_str} ) - {base_label}"
+        return base_label
+
     # =====================================================================
     # DRAW BOXPLOTS
     # =====================================================================
@@ -549,7 +587,7 @@ def plot_boxplot_comparison(
             Patch(
                 facecolor=cat_palette.get(cat, "#888888"),
                 edgecolor="black",
-                label=cat,
+                label=_format_legend_label(cat),
             )
             for cat in cat_order
         ]
@@ -602,7 +640,7 @@ def plot_boxplot_comparison(
         for cat in cat_order:
             for stat in (stat_order or [None]):
                 color = combined_colors.get((cat, stat), "#888888")
-                label = f"{cat} - {stat}" if stat is not None else str(cat)
+                label = _format_legend_label(cat, stat)
                 color_patches.append(
                     Patch(facecolor=color, edgecolor="black", label=label)
                 )
@@ -701,11 +739,15 @@ def plot_boxplot_comparison(
         ax.set_ylabel("")
 
     if title is not None:
-        ax.set_title(title, fontweight="bold", fontsize=11)
+        ax.set_title(title, fontweight="bold", fontsize=title_fontsize)
 
     # X-tick rotation
     if xtick_rotation != 0.0 or xtick_size != 10.0 or horizontal_alignment != "center":
         plt.setp(ax.get_xticklabels(), rotation=xtick_rotation, ha=horizontal_alignment, fontsize=xtick_size)
+
+    # Do not show xticks labels if legend is present or xtick_labels is False
+    if xtick_labels is False or (legend_title is not None and len(cat_order) > 1):
+        ax.set_xticklabels([])
 
     ax.xaxis.grid(True, linestyle="--", alpha=0.5)
     ax.yaxis.grid(True, linestyle="--", alpha=0.5)
@@ -721,13 +763,13 @@ def plot_boxplot_comparison(
 
         # Small margin so whisker caps are never clipped by the axis edge.
         # Fixed at 50% of the tick interval; never exceeds one full tick.
-        margin = y_tick_interval * 0.50
+        margin = ytick_interval * 0.50
 
         y_bottom = min_whisker - margin
         y_top = max_whisker + margin
 
-        # y_bottom = _snap_to_tick(y_bottom, y_tick_interval, direction="down")
-        y_top = _snap_to_tick(y_top, y_tick_interval, direction="up")
+        # y_bottom = _snap_to_tick(y_bottom, ytick_interval, direction="down")
+        y_top = _snap_to_tick(y_top, ytick_interval, direction="up")
 
         # Do not force negative limits when all data is non-negative.
         # if y_bottom < 0 and min_whisker >= 0:
@@ -735,10 +777,10 @@ def plot_boxplot_comparison(
 
         ax.set_ylim(bottom=y_bottom, top=y_top)
         if not use_log:
-            ax.yaxis.set_major_locator(MultipleLocator(y_tick_interval))
+            ax.yaxis.set_major_locator(MultipleLocator(ytick_interval))
     else:
         if not use_log:
-            ax.yaxis.set_major_locator(MultipleLocator(y_tick_interval))
+            ax.yaxis.set_major_locator(MultipleLocator(ytick_interval))
 
     sns.despine(ax=ax)
     return ax
